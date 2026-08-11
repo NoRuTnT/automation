@@ -1,0 +1,9 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+
+# Local virtual environment and PyInstaller build outputs
+.venv/
+build/
+dist/
+*.spec
