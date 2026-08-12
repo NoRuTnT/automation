@@ -16,7 +16,7 @@ APP_NAME = "ISCPSR 업무정리 자동화"
 
 DEFAULT_SETTINGS = {
     "separator_char": "-",
-    "separator_length": 40,
+    "separator_length": 99,
     "conversation_separator": True,
     "feedback_prefix": "#",
     "last_location": ""
