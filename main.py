@@ -1,11 +1,11 @@
 import json
 import re
 import shutil
-from datetime import datetime
+import calendar
+from datetime import date
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from tkcalendar import DateEntry
 
 
 # ============================================================
@@ -76,38 +76,121 @@ ALLOWED_EXTENSIONS = {
 }
 
 
-class StableDateEntry(DateEntry):
-    """tkcalendar 1.5.0에서 팝업 내부 버튼 클릭 시 달력이 닫히는 문제를 보정한다."""
+class DatePicker(ttk.Frame):
+    """외부 패키지 없이 사용하는 날짜 입력창과 팝업 달력."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.after_idle(self._arrange_calendar_header)
+    WEEKDAYS = ("일", "월", "화", "수", "목", "금", "토")
 
-    def _arrange_calendar_header(self):
-        """달력 헤더를 '연도 | 월' 순서로 배치한다."""
-        calendar = self._calendar
-        year_frame = calendar._header_year.master
-        month_frame = calendar._header_month.master
-        year_frame.pack_forget()
-        month_frame.pack_forget()
-        year_frame.pack(side="left")
-        month_frame.pack(side="right", fill="x")
+    def __init__(self, master, on_date_selected=None):
+        super().__init__(master)
+        self.selected_date = date.today()
+        self.display_year = self.selected_date.year
+        self.display_month = self.selected_date.month
+        self.on_date_selected = on_date_selected
+        self.date_var = tk.StringVar()
+        self.popup = None
 
-    def _on_focus_out_cal(self, event):
-        x, y = self._top_cal.winfo_pointerxy()
-        left = self._top_cal.winfo_rootx()
-        top = self._top_cal.winfo_rooty()
-        inside_popup = (
-            left <= x < left + self._top_cal.winfo_width()
-            and top <= y < top + self._top_cal.winfo_height()
+        self.entry = ttk.Entry(self, textvariable=self.date_var, width=12, state="readonly")
+        self.entry.pack(side="left")
+        ttk.Button(self, text="▼", width=3, command=self.toggle_popup).pack(side="left", padx=(2, 0))
+        self._update_entry()
+
+    def get_date(self):
+        return self.selected_date
+
+    def set_date(self, value):
+        self.selected_date = value
+        self.display_year = value.year
+        self.display_month = value.month
+        self._update_entry()
+
+    def _update_entry(self):
+        self.date_var.set(self.selected_date.strftime("%Y-%m-%d"))
+
+    def toggle_popup(self):
+        if self.popup and self.popup.winfo_exists():
+            self.close_popup()
+        else:
+            self.open_popup()
+
+    def open_popup(self):
+        self.display_year = self.selected_date.year
+        self.display_month = self.selected_date.month
+        self.popup = tk.Toplevel(self)
+        self.popup.title("날짜 선택")
+        self.popup.resizable(False, False)
+        self.popup.transient(self.winfo_toplevel())
+        self.popup.bind("<Escape>", lambda event: self.close_popup())
+        self.render_calendar()
+        self.popup.update_idletasks()
+        self.popup.geometry(
+            f"+{self.winfo_rootx()}+{self.winfo_rooty() + self.winfo_height()}"
         )
+        # Windows에서 팝업이 메인 창 뒤로 숨지 않도록 화면 맨 앞으로 올린다.
+        self.popup.deiconify()
+        self.popup.lift()
+        self.popup.attributes("-topmost", True)
+        self.popup.after(100, lambda: self.popup and self.popup.winfo_exists() and self.popup.attributes("-topmost", False))
+        self.popup.focus_set()
 
-        if inside_popup:
-            # 연/월 화살표도 포커스를 가져가므로, 팝업을 닫지 않고 달력으로 포커스를 돌린다.
-            self.after_idle(self._calendar.focus_set)
+    def close_popup(self):
+        if self.popup and self.popup.winfo_exists():
+            self.popup.destroy()
+        self.popup = None
+
+    def change_year(self, offset):
+        self.display_year += offset
+        self.render_calendar()
+
+    def change_month(self, offset):
+        self.display_month += offset
+        if self.display_month == 0:
+            self.display_year -= 1
+            self.display_month = 12
+        elif self.display_month == 13:
+            self.display_year += 1
+            self.display_month = 1
+        self.render_calendar()
+
+    def select_date(self, day):
+        self.selected_date = date(self.display_year, self.display_month, day)
+        self._update_entry()
+        self.close_popup()
+        if self.on_date_selected:
+            self.on_date_selected()
+
+    def render_calendar(self):
+        if not self.popup or not self.popup.winfo_exists():
             return
+        for widget in self.popup.winfo_children():
+            widget.destroy()
 
-        super()._on_focus_out_cal(event)
+        header = ttk.Frame(self.popup, padding=5)
+        header.pack(fill="x")
+        # 요청한 순서대로 연도 선택은 왼쪽, 월 선택은 오른쪽에 표시한다.
+        year_frame = ttk.Frame(header)
+        year_frame.pack(side="left")
+        ttk.Button(year_frame, text="‹", width=2, command=lambda: self.change_year(-1)).pack(side="left")
+        ttk.Label(year_frame, text=f"{self.display_year}년", width=7, anchor="center").pack(side="left")
+        ttk.Button(year_frame, text="›", width=2, command=lambda: self.change_year(1)).pack(side="left")
+
+        month_frame = ttk.Frame(header)
+        month_frame.pack(side="right")
+        ttk.Button(month_frame, text="‹", width=2, command=lambda: self.change_month(-1)).pack(side="left")
+        ttk.Label(month_frame, text=f"{self.display_month}월", width=4, anchor="center").pack(side="left")
+        ttk.Button(month_frame, text="›", width=2, command=lambda: self.change_month(1)).pack(side="left")
+
+        days = ttk.Frame(self.popup, padding=(5, 0, 5, 5))
+        days.pack()
+        for column, weekday in enumerate(self.WEEKDAYS):
+            ttk.Label(days, text=weekday, width=3, anchor="center").grid(row=0, column=column, pady=(0, 2))
+
+        for row, week in enumerate(calendar.Calendar(firstweekday=6).monthdayscalendar(self.display_year, self.display_month), start=1):
+            for column, day in enumerate(week):
+                if day:
+                    ttk.Button(days, text=str(day), width=3, command=lambda value=day: self.select_date(value)).grid(row=row, column=column)
+                else:
+                    ttk.Label(days, text="", width=3).grid(row=row, column=column)
 
 
 # ============================================================
@@ -369,11 +452,9 @@ class Application(tk.Tk):
         date_frame = ttk.Frame(info_frame)
         date_frame.grid(row=0, column=1, sticky="w", pady=5)
 
-        self.date_entry = StableDateEntry(
+        self.date_entry = DatePicker(
             date_frame,
-            date_pattern="yyyy-mm-dd",
-            locale="ko_KR",
-            state="normal"
+            on_date_selected=self.update_weekday
         )
 
         self.date_entry.pack(side="left")
@@ -387,16 +468,6 @@ class Application(tk.Tk):
         self.weekday_label.pack(
             side="left",
             padx=(5, 0),
-        )
-
-        self.date_entry.bind(
-            "<<DateEntrySelected>>",
-            self.update_weekday
-        )
-        self.date_entry.bind(
-            "<ButtonRelease-1>",
-            self.activate_calendar_navigation,
-            add="+"
         )
 
         self.update_weekday()
@@ -697,17 +768,6 @@ class Application(tk.Tk):
         self.weekday_label.config(
             text=f"({weekday})"
         )
-
-    def activate_calendar_navigation(self, event=None):
-        """날짜 팝업을 열 때 tkcalendar의 연/월 이동 버튼을 활성화한다."""
-        def enable_buttons():
-            calendar = self.date_entry._calendar
-            calendar.configure(state="normal")
-            for button_name in ("_l_year", "_l_month", "_r_month", "_r_year"):
-                getattr(calendar, button_name).state(["!disabled"])
-
-        # DateEntry가 팝업을 표시한 다음 실행해야 버튼 상태가 덮어써지지 않는다.
-        self.after(20, enable_buttons)
 
     # --------------------------------------------------------
     # 저장 위치
