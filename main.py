@@ -447,10 +447,10 @@ class Application(tk.Tk):
         ttk.Label(
             info_frame,
             text="날짜"
-        ).grid(row=0, column=0, sticky="w", pady=5)
+        ).grid(row=1, column=0, sticky="w", pady=5)
 
         date_frame = ttk.Frame(info_frame)
-        date_frame.grid(row=0, column=1, sticky="w", pady=5)
+        date_frame.grid(row=1, column=1, sticky="w", pady=5)
 
         self.date_entry = DatePicker(
             date_frame,
@@ -476,7 +476,7 @@ class Application(tk.Tk):
         ttk.Label(
             info_frame,
             text="ISCPSR 번호"
-        ).grid(row=1, column=0, sticky="w", pady=5)
+        ).grid(row=2, column=0, sticky="w", pady=5)
 
         self.iscpsr_var = tk.StringVar()
 
@@ -484,7 +484,7 @@ class Application(tk.Tk):
             info_frame,
             textvariable=self.iscpsr_var
         ).grid(
-            row=1,
+            row=2,
             column=1,
             columnspan=2,
             sticky="ew",
@@ -495,7 +495,7 @@ class Application(tk.Tk):
         ttk.Label(
             info_frame,
             text="오퍼링"
-        ).grid(row=2, column=0, sticky="w", pady=5)
+        ).grid(row=3, column=0, sticky="w", pady=5)
 
         self.offering_var = tk.StringVar(
             value="PP"
@@ -504,13 +504,13 @@ class Application(tk.Tk):
         offering_combo = ttk.Combobox(
             info_frame,
             textvariable=self.offering_var,
-            values=["PP", "PS", "PG"],
+            values=["PP", "PS", "PG", "PK"],
             state="readonly",
             width=10
         )
 
         offering_combo.grid(
-            row=2,
+            row=3,
             column=1,
             sticky="w",
             pady=5
@@ -520,32 +520,13 @@ class Application(tk.Tk):
         ttk.Label(
             info_frame,
             text="POOL"
-        ).grid(row=3, column=0, sticky="w", pady=5)
+        ).grid(row=4, column=0, sticky="w", pady=5)
 
         self.pool_var = tk.StringVar()
 
         ttk.Entry(
             info_frame,
             textvariable=self.pool_var
-        ).grid(
-            row=3,
-            column=1,
-            columnspan=2,
-            sticky="ew",
-            pady=5
-        )
-
-        # 프로젝트명
-        ttk.Label(
-            info_frame,
-            text="프로젝트명"
-        ).grid(row=4, column=0, sticky="w", pady=5)
-
-        self.project_var = tk.StringVar()
-
-        ttk.Entry(
-            info_frame,
-            textvariable=self.project_var
         ).grid(
             row=4,
             column=1,
@@ -554,11 +535,49 @@ class Application(tk.Tk):
             pady=5
         )
 
-        # 생성자
+        # VOC 문의제목
+        ttk.Label(
+            info_frame,
+            text="VOC 문의제목"
+        ).grid(row=0, column=0, sticky="w", pady=5)
+
+        self.voc_title_var = tk.StringVar()
+
+        ttk.Entry(
+            info_frame,
+            textvariable=self.voc_title_var
+        ).grid(
+            row=0,
+            column=1,
+            columnspan=2,
+            sticky="ew",
+            pady=5
+        )
+
+        # 과제명, 프로젝트명 (선택 입력)
+        ttk.Label(
+            info_frame,
+            text="과제명,프로젝트명"
+        ).grid(row=5, column=0, sticky="w", pady=5)
+
+        self.project_var = tk.StringVar()
+
+        ttk.Entry(
+            info_frame,
+            textvariable=self.project_var
+        ).grid(
+            row=5,
+            column=1,
+            columnspan=2,
+            sticky="ew",
+            pady=5
+        )
+
+        # 생성자/요청자 상세 정보
         ttk.Label(
             info_frame,
             text="생성자/요청자"
-        ).grid(row=5, column=0, sticky="w", pady=5)
+        ).grid(row=6, column=0, sticky="w", pady=5)
 
         self.creator_var = tk.StringVar()
 
@@ -566,7 +585,26 @@ class Application(tk.Tk):
             info_frame,
             textvariable=self.creator_var
         ).grid(
-            row=5,
+            row=6,
+            column=1,
+            columnspan=2,
+            sticky="ew",
+            pady=5
+        )
+
+        # 폴더명에만 사용할 생성자 성명
+        ttk.Label(
+            info_frame,
+            text="생성자 성명(폴더용)"
+        ).grid(row=7, column=0, sticky="w", pady=5)
+
+        self.creator_name_var = tk.StringVar()
+
+        ttk.Entry(
+            info_frame,
+            textvariable=self.creator_name_var
+        ).grid(
+            row=7,
             column=1,
             columnspan=2,
             sticky="ew",
@@ -1238,6 +1276,10 @@ class Application(tk.Tk):
             self.iscpsr_var.get()
         )
 
+        voc_title = sanitize_text(
+            self.voc_title_var.get()
+        )
+
         project = sanitize_text(
             self.project_var.get()
         )
@@ -1246,21 +1288,11 @@ class Application(tk.Tk):
             self.creator_var.get()
         )
 
-        pool = sanitize_text(
-            self.pool_var.get()
+        creator_name = sanitize_text(
+            self.creator_name_var.get()
         )
 
         description = self.description_text.get(
-            "1.0",
-            "end"
-        ).strip()
-
-        first_feedback = self.first_feedback.get(
-            "1.0",
-            "end"
-        ).strip()
-
-        final_feedback = self.final_feedback.get(
             "1.0",
             "end"
         ).strip()
@@ -1284,9 +1316,9 @@ class Application(tk.Tk):
             )
             return None
 
-        if not project:
+        if not voc_title:
             missing.append(
-                "프로젝트명"
+                "VOC 문의제목"
             )
 
         if not creator:
@@ -1294,24 +1326,14 @@ class Application(tk.Tk):
                 "생성자/요청자"
             )
 
+        if not creator_name:
+            missing.append(
+                "생성자 성명(폴더용)"
+            )
+
         if not description:
             missing.append(
                 "Description"
-            )
-
-        if not pool:
-            missing.append(
-                "POOL"
-            )
-
-        if not first_feedback:
-            missing.append(
-                "최초 접수 Feedback"
-            )
-
-        if not final_feedback:
-            missing.append(
-                "최종 답변 Feedback"
             )
 
         if missing:
@@ -1342,8 +1364,8 @@ class Application(tk.Tk):
         # 폴더명 구성 요소 검사
         for label, value in [
             ("ISCPSR 번호", iscpsr),
-            ("프로젝트명", project),
-            ("생성자/요청자", creator)
+            ("VOC 문의제목", voc_title),
+            ("생성자 성명(폴더용)", creator_name)
         ]:
 
             invalid, char = contains_invalid_filename_char(
@@ -1381,18 +1403,20 @@ class Application(tk.Tk):
             f"{date_string}_"
             f"ISCPSR-{iscpsr}_"
             f"{offering}_"
-            f"{project}"
-            f"({creator})"
+            f"{voc_title}"
+            f"({creator_name})"
         )
 
         return {
             "location": location_path,
             "folder_name": folder_name,
+            "voc_title": voc_title,
             "project": project,
             "iscpsr": iscpsr,
             "offering": offering,
             "pool": sanitize_text(self.pool_var.get()),
             "creator": creator,
+            "creator_name": creator_name,
             "description": description
         }
 
@@ -1414,7 +1438,7 @@ class Application(tk.Tk):
         content = []
 
         content.append(
-            self.iscpsr_var.get().strip()
+            f"ISCPSR-{self.iscpsr_var.get().strip()}"
         )
 
         content.append("")
@@ -1578,7 +1602,7 @@ class Application(tk.Tk):
 
         # TXT 이름
         txt_name = (
-            f"{data['project']}.txt"
+            f"{data['offering']}_{data['voc_title']}.txt"
         )
 
         txt_path = (
