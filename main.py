@@ -504,7 +504,7 @@ class Application(tk.Tk):
         offering_combo = ttk.Combobox(
             info_frame,
             textvariable=self.offering_var,
-            values=["PP", "PS", "PG", "PK"],
+            values=["PP", "PS", "PG", "PK", "PPP"],
             state="readonly",
             width=10
         )
@@ -708,12 +708,26 @@ class Application(tk.Tk):
             pady=20
         )
 
+        action_frame = ttk.Frame(self.main_frame)
+        action_frame.pack(pady=20)
+
         ttk.Button(
-            self.main_frame,
+            action_frame,
+            text="입력 내용 초기화",
+            command=self.reset_form
+        ).pack(
+            side="left",
+            padx=(0, 10),
+            ipadx=15,
+            ipady=8
+        )
+
+        ttk.Button(
+            action_frame,
             text="업무 폴더 생성",
             command=self.generate
         ).pack(
-            pady=20,
+            side="left",
             ipadx=30,
             ipady=8
         )
@@ -760,6 +774,46 @@ class Application(tk.Tk):
             self.canvas_window,
             width=event.width
         )
+
+    def reset_form(self):
+        """폼을 프로그램을 처음 실행한 상태로 되돌린다."""
+        confirmed = messagebox.askyesno(
+            "입력 내용 초기화",
+            "현재 입력한 내용, 대화내용, 첨부파일을 모두 초기화할까요?\n\n"
+            "이미 생성한 폴더와 파일은 삭제되지 않습니다."
+        )
+
+        if not confirmed:
+            return
+
+        self.location_var.set(self.settings.get("last_location", ""))
+        self.iscpsr_var.set("")
+        self.offering_var.set("PP")
+        self.pool_var.set("")
+        self.voc_title_var.set("")
+        self.project_var.set("")
+        self.creator_var.set("")
+        self.creator_name_var.set("")
+
+        self.date_entry.set_date(date.today())
+        self.update_weekday()
+
+        for text_widget in (
+            self.description_text,
+            self.first_feedback,
+            self.final_feedback
+        ):
+            text_widget.delete("1.0", "end")
+
+        for frame, _ in self.conversation_widgets:
+            frame.destroy()
+        self.conversation_widgets.clear()
+        self.conversation_frame.pack_forget()
+
+        self.attachments.clear()
+        self.refresh_attachment_list()
+
+        self.canvas.yview_moveto(0)
 
     def on_mousewheel(self, event):
         """마우스 포인터가 폼 위에 있을 때만 세로 스크롤한다."""
